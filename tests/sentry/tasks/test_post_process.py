@@ -2598,7 +2598,6 @@ class PostProcessGroupPerformanceTest(
             is_new_group_environment=False,
             cache_key=cache_key,
             group_id=None,
-            group_states=None,
             project_id=self.project.id,
             eventstream_type=EventStreamEventType.Transaction,
         )
