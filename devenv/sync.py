@@ -111,6 +111,65 @@ def main(context: dict[str, str]) -> int:
             # this is needed for devenv <=1.4.0,>1.2.3 to finish syncing and therefore update itself
             limactl.install()
 
+    job_pre_commit = (
+        "pre-commit dependencies",
+        (
+            {
+                "cmd": ("pre-commit", "install", "--install-hooks", "-f"),
+                "pathprepend": f"{venv_dir}/bin:{reporoot}/.devenv/bin",
+            }
+        ),
+    )
+
+    proc.run_jobs(
+        (
+            (
+                "python dependencies",
+                (
+                    {
+                        # kwargs to proc.run
+                        "cmd": (
+                            "pip",
+                            "install",
+                            "--constraint",
+                            "requirements-dev-frozen.txt",
+                            "pip",
+                        ),
+                        "pathprepend": f"{venv_dir}/bin:{reporoot}/.devenv/bin",
+                    },
+                    {
+                        "cmd": (
+                            "pip",
+                            "uninstall",
+                            "-qqy",
+                            "djangorestframework-stubs",
+                            "django-stubs",
+                        ),
+                        "pathprepend": f"{venv_dir}/bin:{reporoot}/.devenv/bin",
+                        "start_job": job_pre_commit,  # we need to somehow pass this off to the TPE
+                    },
+                    # todo install requirements
+                    {
+                        "cmd": ("python3", "-m", "tools.fast_editable", "--path", "."),
+                        "pathprepend": f"{venv_dir}/bin:{reporoot}/.devenv/bin",
+                    },
+                ),
+            ),
+            (
+                "javascript dependencies",
+                (
+                    {
+                        "cmd": ("true"), #("make", "install-js-dev"),
+                        "pathprepend": f"{reporoot}/.devenv/bin",
+                        # volta stuff
+                    },
+                ),
+            ),
+        ),
+    )
+
+    return 0
+
     if not run_procs(
         repo,
         reporoot,
