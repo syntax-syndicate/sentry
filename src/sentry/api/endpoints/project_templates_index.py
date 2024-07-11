@@ -60,3 +60,12 @@ class OrganizationProjectTemplatesIndexEndpoint(OrganizationEndpoint):
             on_results=lambda x: serialize(x, request.user, ProjectTemplateSerializer()),
             paginator_cls=OffsetPaginator,
         )
+
+    @ensure_rollout_enabled(PROJECT_TEMPLATE_FEATURE_FLAG)
+    def post(self, request: Request, organization: Organization) -> Response:
+        """
+        Create a new Project Template.
+
+        Create a new project template for the organization.
+        """
+        return Response(status=200)
