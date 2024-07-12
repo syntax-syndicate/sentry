@@ -55,3 +55,38 @@ class ProjectTemplateIndexTest(APITestCase):
         # Ensure this errors with 403, as the user does not have access to the organization
         response = self.get_error_response(org_two.id, status_code=403)
         assert response.status_code == 403
+
+
+class ProjectTemplateIndexPostTest(APITestCase):
+    endpoint = "sentry-api-0-organization-project-templates"
+
+    def setUp(self):
+        super().setUp()
+        self.user = self.create_user()
+        self.org = self.create_organization(owner=self.user)
+        self.team = self.create_team(organization=self.org, members=[self.user])
+
+        self.login_as(self.user)
+
+        self.project_template = self.create_project_template(organization=self.org)
+        self.project_template_two = self.create_project_template(organization=self.org)
+
+    @with_feature(PROJECT_TEMPLATE_FEATURE_FLAG)
+    def test_post(self):
+        response = self.get_success_response(self.org.id, method="POST")
+        assert response.status_code == 200
+        # assert response.status_code == 201
+        # assert response.data["id"] is not None
+
+    def test_post__no_feature(self):
+        response = self.get_error_response(self.org.id, method="POST", status_code=404)
+        assert response.status_code == 404
+
+    @with_feature(PROJECT_TEMPLATE_FEATURE_FLAG)
+    def test_post__non_admin(self):
+        org_two = self.create_organization()
+        self.create_team(organization=org_two, members=[self.user])
+        self.create_project_template(organization=org_two)
+
+        response = self.get_error_response(org_two, method="POST", status_code=403)
+        assert response.status_code == 403
