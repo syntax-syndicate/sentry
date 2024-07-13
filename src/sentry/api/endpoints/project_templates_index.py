@@ -3,7 +3,7 @@ from functools import wraps
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from sentry import features
+from sentry import audit_log, features
 from sentry.api.api_owners import ApiOwner
 from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import region_silo_endpoint
@@ -15,6 +15,7 @@ from sentry.models.organization import Organization
 from sentry.models.projecttemplate import ProjectTemplate
 
 PROJECT_TEMPLATE_FEATURE_FLAG = "organizations:project-templates"
+AUDIT_LOG_EVENT_ID = "PROJECT_TEMPLATE_CREATED"
 
 
 def ensure_rollout_enabled(flag):
@@ -74,7 +75,6 @@ class OrganizationProjectTemplatesIndexEndpoint(OrganizationEndpoint):
             return Response(status=400, data={"detail": "Template name is required"})
 
         # TODO - Rate Limiting
-        # TODO - Access Logs
 
         project_template = ProjectTemplate.objects.create(
             name=name,
@@ -85,5 +85,13 @@ class OrganizationProjectTemplatesIndexEndpoint(OrganizationEndpoint):
         if options:
             for key, value in options.items():
                 project_template.options.create(key=key, value=value)
+
+        self.create_audit_entry(
+            request=request,
+            organization=organization,
+            target_object=project_template.id,
+            event=audit_log.get_event_id(AUDIT_LOG_EVENT_ID),
+            data=project_template.get_audit_log_data(),
+        )
 
         return Response(serialize(project_template, request.user), status=201)

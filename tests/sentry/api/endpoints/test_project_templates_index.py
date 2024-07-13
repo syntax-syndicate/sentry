@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from pytest import mark
 
 from sentry.api.endpoints.project_templates_index import PROJECT_TEMPLATE_FEATURE_FLAG
@@ -111,3 +113,15 @@ class ProjectTemplateIndexPostTest(APITestCase):
     def test_post__no_name(self):
         response = self.get_error_response(self.org.id, method="POST", status_code=400)
         assert response.status_code == 400
+
+    @with_feature(PROJECT_TEMPLATE_FEATURE_FLAG)
+    @patch("sentry.api.base.create_audit_entry")
+    def test_post__audit_log(self, mock_audit):
+        self.get_success_response(
+            self.org.id,
+            method="POST",
+            name="Test Project Template",
+        )
+
+        mock_audit.assert_called()
+        mock_audit.reset_mock()
