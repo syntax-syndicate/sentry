@@ -68,4 +68,22 @@ class OrganizationProjectTemplatesIndexEndpoint(OrganizationEndpoint):
 
         Create a new project template for the organization.
         """
-        return Response(status=200)
+        name = request.data.get("name", None)
+
+        if name is None:
+            return Response(status=400, data={"detail": "Template name is required"})
+
+        # TODO - Rate Limiting
+        # TODO - Access Logs
+
+        project_template = ProjectTemplate.objects.create(
+            name=name,
+            organization=organization,
+        )
+
+        options = request.data.get("options", None)
+        if options:
+            for key, value in options.items():
+                project_template.options.create(key=key, value=value)
+
+        return Response(serialize(project_template, request.user), status=201)

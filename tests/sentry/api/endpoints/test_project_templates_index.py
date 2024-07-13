@@ -1,6 +1,7 @@
 from pytest import mark
 
 from sentry.api.endpoints.project_templates_index import PROJECT_TEMPLATE_FEATURE_FLAG
+from sentry.models.projecttemplate import ProjectTemplate
 from sentry.testutils.cases import APITestCase
 from sentry.testutils.helpers import with_feature
 
@@ -71,13 +72,6 @@ class ProjectTemplateIndexPostTest(APITestCase):
         self.project_template = self.create_project_template(organization=self.org)
         self.project_template_two = self.create_project_template(organization=self.org)
 
-    @with_feature(PROJECT_TEMPLATE_FEATURE_FLAG)
-    def test_post(self):
-        response = self.get_success_response(self.org.id, method="POST")
-        assert response.status_code == 200
-        # assert response.status_code == 201
-        # assert response.data["id"] is not None
-
     def test_post__no_feature(self):
         response = self.get_error_response(self.org.id, method="POST", status_code=404)
         assert response.status_code == 404
@@ -88,5 +82,32 @@ class ProjectTemplateIndexPostTest(APITestCase):
         self.create_team(organization=org_two, members=[self.user])
         self.create_project_template(organization=org_two)
 
-        response = self.get_error_response(org_two, method="POST", status_code=403)
+        response = self.get_error_response(org_two.id, method="POST", status_code=403)
         assert response.status_code == 403
+
+    @with_feature(PROJECT_TEMPLATE_FEATURE_FLAG)
+    def test_post(self):
+        response = self.get_success_response(
+            self.org.id, method="POST", name="Test Project Template"
+        )
+        assert response.status_code == 201
+
+    @with_feature(PROJECT_TEMPLATE_FEATURE_FLAG)
+    def test_post__with_options(self):
+        test_options = {"test-key": "value"}
+        response = self.get_success_response(
+            self.org.id,
+            method="POST",
+            name="Test Project Template",
+            options=test_options,
+        )
+
+        assert response.status_code == 201
+        new_template = ProjectTemplate.objects.get(id=response.data["id"])
+        created_options = {opt.key: opt.value for opt in new_template.options.all()}
+        assert created_options == test_options
+
+    @with_feature(PROJECT_TEMPLATE_FEATURE_FLAG)
+    def test_post__no_name(self):
+        response = self.get_error_response(self.org.id, method="POST", status_code=400)
+        assert response.status_code == 400
