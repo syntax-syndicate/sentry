@@ -43,6 +43,10 @@ class BitbucketUninstalledEndpoint(Endpoint):
         org_integrations = integration_service.get_organization_integrations(
             integration_id=integration.id
         )
+        org_integration_ids = [oi.id for oi in org_integrations]
+        integration_service.update_organization_integrations(
+            org_integration_ids=org_integration_ids, status=ObjectStatus.DISABLED
+        )
 
         for oi in org_integrations:
             repository_service.disable_repositories_for_integration(

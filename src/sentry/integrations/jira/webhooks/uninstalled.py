@@ -7,6 +7,7 @@ from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import control_silo_endpoint
 from sentry.constants import ObjectStatus
 from sentry.integrations.models.integration import Integration
+from sentry.integrations.services.integration.service import integration_service
 from sentry.integrations.utils import get_integration_from_jwt
 from sentry.integrations.utils.scope import bind_org_context_from_integration
 
@@ -37,5 +38,12 @@ class JiraSentryUninstalledWebhook(JiraWebhookBase):
         sentry_sdk.set_tag("integration_id", integration.id)
 
         integration.update(status=ObjectStatus.DISABLED)
+        org_integrations = integration_service.get_organization_integrations(
+            integration_id=integration.id
+        )
+        org_integration_ids = [oi.id for oi in org_integrations]
+        integration_service.update_organization_integrations(
+            org_integration_ids=org_integration_ids, status=ObjectStatus.DISABLED
+        )
 
         return self.respond()

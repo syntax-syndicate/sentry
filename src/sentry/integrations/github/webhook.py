@@ -261,6 +261,7 @@ class InstallationEventWebhook:
         org_integrations: list[RpcOrganizationIntegration],
     ) -> None:
         org_ids = {oi.organization_id for oi in org_integrations}
+        org_integration_ids = [oi.id for oi in org_integrations]
 
         logger.info(
             "InstallationEventWebhook._handle_delete",
@@ -272,6 +273,9 @@ class InstallationEventWebhook:
         )
         integration_service.update_integration(
             integration_id=integration.id, status=ObjectStatus.DISABLED
+        )
+        integration_service.update_organization_integrations(
+            org_integration_ids=org_integration_ids, status=ObjectStatus.DISABLED
         )
         for organization_id in org_ids:
             repository_service.disable_repositories_for_integration(
