@@ -133,23 +133,23 @@ class ReleaseSeries extends Component<ReleaseSeriesProps, State> {
       !isEqual(prevProps.period, this.props.period) ||
       !isEqual(prevProps.query, this.props.query)
     ) {
-      console.log('mounting');
-      console.log(
-        prevProps.projects,
-        prevProps.environments,
-        prevProps.start,
-        prevProps.end,
-        prevProps.period,
-        prevProps.query
-      );
-      console.log(
-        this.props.projects,
-        this.props.environments,
-        this.props.start,
-        this.props.end,
-        this.props.period,
-        this.props.query
-      );
+      // console.log('mounting');
+      // console.log(
+      //   prevProps.projects,
+      //   prevProps.environments,
+      //   prevProps.start,
+      //   prevProps.end,
+      //   prevProps.period,
+      //   prevProps.query
+      // );
+      // console.log(
+      //   this.props.projects,
+      //   this.props.environments,
+      //   this.props.start,
+      //   this.props.end,
+      //   this.props.period,
+      //   this.props.query
+      // );
       this.fetchData();
     } else if (!isEqual(prevProps.emphasizeReleases, this.props.emphasizeReleases)) {
       this.setReleasesWithSeries(this.state.releases);

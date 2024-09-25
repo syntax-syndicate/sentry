@@ -302,7 +302,7 @@ class WidgetCardChart extends Component<WidgetCardChartProps> {
             memoized
           >
             {({releaseSeries}) => {
-              console.log('releases', releaseSeries);
+              // console.log('releases', releaseSeries);
               location.query.unselectedSeries = 'Releases';
               chartProps.legend.selected = getSeriesSelection(location);
               return (
