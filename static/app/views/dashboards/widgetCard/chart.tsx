@@ -13,6 +13,7 @@ import {BarChart} from 'sentry/components/charts/barChart';
 import ChartZoom from 'sentry/components/charts/chartZoom';
 import ErrorPanel from 'sentry/components/charts/errorPanel';
 import {LineChart} from 'sentry/components/charts/lineChart';
+import ReleaseSeries from 'sentry/components/charts/releaseSeries';
 import SimpleTableChart from 'sentry/components/charts/simpleTableChart';
 import TransitionChart from 'sentry/components/charts/transitionChart';
 import TransparentLoadingMask from 'sentry/components/charts/transparentLoadingMask';
@@ -278,15 +279,71 @@ class WidgetCardChart extends Component<WidgetCardChartProps> {
     const {widget} = this.props;
     const stacked = widget.queries[0]?.columns.length > 0;
 
+    const {selection, location, organization} = this.props;
+    const {start, end, period, utc} = selection.datetime;
+    const {environments, projects} = selection;
+
+    // console.log(utc);
+
     switch (widget.displayType) {
       case 'bar':
         return <BarChart {...chartProps} stacked={stacked} />;
       case 'area':
       case 'top_n':
-        return <AreaChart stacked {...chartProps} />;
+        return organization.features.includes('dashboards-releases-on-charts') ? (
+          <ReleaseSeries
+            end={end}
+            start={start}
+            period={period}
+            environments={environments}
+            projects={projects}
+            organization={organization}
+            utc={utc}
+            memoized
+          >
+            {({releaseSeries}) => {
+              console.log('releases', releaseSeries);
+              location.query.unselectedSeries = 'Releases';
+              chartProps.legend.selected = getSeriesSelection(location);
+              return (
+                <AreaChart
+                  stacked
+                  {...chartProps}
+                  series={[...chartProps.series, ...releaseSeries]}
+                />
+              );
+            }}
+          </ReleaseSeries>
+        ) : (
+          <AreaChart stacked {...chartProps} />
+        );
       case 'line':
       default:
-        return <LineChart {...chartProps} />;
+        return organization.features.includes('dashboards-releases-on-charts') ? (
+          <ReleaseSeries
+            end={end}
+            start={start}
+            period={period}
+            utc={utc}
+            environments={environments}
+            projects={projects}
+            organization={organization}
+            memoized
+          >
+            {({releaseSeries}) => {
+              location.query.unselectedSeries = 'Releases';
+              chartProps.legend.selected = getSeriesSelection(location);
+              return (
+                <LineChart
+                  {...chartProps}
+                  series={[...chartProps.series, ...releaseSeries]}
+                />
+              );
+            }}
+          </ReleaseSeries>
+        ) : (
+          <LineChart {...chartProps} />
+        );
     }
   }
 

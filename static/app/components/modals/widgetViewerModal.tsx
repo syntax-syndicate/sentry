@@ -239,12 +239,13 @@ function WidgetViewerModal(props: Props) {
 
   // Get legends toggle settings from location
   // We use the legend query params for just the initial state
-  const [disabledLegends, setDisabledLegends] = useState<{[key: string]: boolean}>(
-    decodeList(location.query[WidgetViewerQueryField.LEGEND]).reduce((acc, legend) => {
-      acc[legend] = false;
-      return acc;
-    }, {})
-  );
+  // const [disabledLegends, setDisabledLegends] = useState<{[key: string]: boolean}>(
+  //   decodeList(location.query[WidgetViewerQueryField.LEGEND]).reduce((acc, legend) => {
+  //     acc[legend] = false;
+  //     return acc;
+  //   }, {})
+  // );
+  // console.log('disable', disabledLegends);
   const [totalResults, setTotalResults] = useState<string | undefined>();
 
   // Get query selection settings from location
@@ -463,23 +464,36 @@ function WidgetViewerModal(props: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedQueryIndex]);
 
-  function onLegendSelectChanged({selected}: {selected: Record<string, boolean>}) {
-    setDisabledLegends(selected);
-    router.replace({
-      pathname: location.pathname,
-      query: {
-        ...location.query,
-        [WidgetViewerQueryField.LEGEND]: Object.keys(selected).filter(
-          key => !selected[key]
-        ),
-      },
-    });
-    trackAnalytics('dashboards_views.widget_viewer.toggle_legend', {
-      organization,
-      widget_type: widget.widgetType ?? WidgetType.DISCOVER,
-      display_type: widget.displayType,
-    });
-  }
+  // function onLegendSelectChanged({
+  //   name,
+  //   selected,
+  // }: {
+  //   name: string;
+  //   selected: Record<string, boolean>;
+  // }) {
+  //   console.log(selected, name);
+  //   const updatedSelected = {...disabledLegends, [name]: !selected[name]};
+  //   console.log(updatedSelected);
+  //   setDisabledLegends(updatedSelected);
+  //   router.replace({
+  //     pathname: location.pathname,
+  //     query: {
+  //       ...location.query,
+  //       [WidgetViewerQueryField.LEGEND]: Object.keys(updatedSelected).filter(
+  //         key => !selected[key]
+  //       ),
+  //       // uneselectedSeries: Object.keys(updatedSelected).filter(
+  //       //   key => !updatedSelected[key]
+  //       // ),
+  //     },
+  //   });
+  //   selected = updatedSelected;
+  //   trackAnalytics('dashboards_views.widget_viewer.toggle_legend', {
+  //     organization,
+  //     widget_type: widget.widgetType ?? WidgetType.DISCOVER,
+  //     display_type: widget.displayType,
+  //   });
+  // }
 
   function DiscoverTable({
     tableResults,
@@ -864,8 +878,8 @@ function WidgetViewerModal(props: Props) {
                 router={router}
                 organization={organization}
                 onZoom={onZoom}
-                onLegendSelectChanged={onLegendSelectChanged}
-                legendOptions={{selected: disabledLegends}}
+                // onLegendSelectChanged={onLegendSelectChanged}
+                // legendOptions={{selected: disabledLegends}}
                 expandNumbers
                 showSlider={shouldShowSlider}
                 noPadding
@@ -881,8 +895,8 @@ function WidgetViewerModal(props: Props) {
                 // Top N charts rely on the orderby of the table
                 widget={primaryWidget}
                 onZoom={onZoom}
-                onLegendSelectChanged={onLegendSelectChanged}
-                legendOptions={{selected: disabledLegends}}
+                // onLegendSelectChanged={onLegendSelectChanged}
+                // legendOptions={{selected: disabledLegends}}
                 expandNumbers
                 showSlider={shouldShowSlider}
                 noPadding

@@ -46,6 +46,7 @@ function getOrganizationReleases(
   organization: Organization,
   conditions: ReleaseConditions
 ) {
+  console.log('fresh call');
   const query = {};
   Object.keys(conditions).forEach(key => {
     let value = conditions[key];
@@ -65,11 +66,18 @@ function getOrganizationReleases(
 }
 
 const getOrganizationReleasesMemoized = memoize(
-  getOrganizationReleases,
-  (_, __, conditions) =>
-    Object.values(conditions)
+  (api: Client, organization: Organization, conditions: ReleaseConditions) =>
+    getOrganizationReleases(api, organization, conditions),
+  (_, __, conditions) => {
+    console.log(
+      Object.values(conditions)
+        .map(val => JSON.stringify(val))
+        .join('-')
+    );
+    return Object.values(conditions)
       .map(val => JSON.stringify(val))
-      .join('-')
+      .join('-');
+  }
 );
 
 export interface ReleaseSeriesProps extends WithRouterProps {
@@ -125,6 +133,23 @@ class ReleaseSeries extends Component<ReleaseSeriesProps, State> {
       !isEqual(prevProps.period, this.props.period) ||
       !isEqual(prevProps.query, this.props.query)
     ) {
+      console.log('mounting');
+      console.log(
+        prevProps.projects,
+        prevProps.environments,
+        prevProps.start,
+        prevProps.end,
+        prevProps.period,
+        prevProps.query
+      );
+      console.log(
+        this.props.projects,
+        this.props.environments,
+        this.props.start,
+        this.props.end,
+        this.props.period,
+        this.props.query
+      );
       this.fetchData();
     } else if (!isEqual(prevProps.emphasizeReleases, this.props.emphasizeReleases)) {
       this.setReleasesWithSeries(this.state.releases);
