@@ -7,50 +7,27 @@ import {t} from 'sentry/locale';
 import PluginIcon from 'sentry/plugins/components/pluginIcon';
 import {space} from 'sentry/styles/space';
 import type {IntegrationProvider} from 'sentry/types/integrations';
-import type {Project} from 'sentry/types/project';
 import {trackAnalytics} from 'sentry/utils/analytics';
 import {getIntegrationFeatureGate} from 'sentry/utils/integrationUtil';
 import {useApiQuery} from 'sentry/utils/queryClient';
-import useRouteAnalyticsParams from 'sentry/utils/routeAnalytics/useRouteAnalyticsParams';
 import useOrganization from 'sentry/utils/useOrganization';
 import MessagingIntegrationModal from 'sentry/views/alerts/rules/issue/messagingIntegrationModal';
 
-interface ProjectWithAlertIntegrationInfo extends Project {
-  hasAlertIntegrationInstalled: boolean;
-}
-
 export enum MessagingIntegrationAnalyticsView {
   ALERT_RULE_CREATION = 'alert_rule_creation',
+  PROJECT_CREATION = 'project_creation',
 }
 
 type Props = {
-  projectSlug: string;
   refetchConfigs: () => void;
   analyticsParams?: {
     view: MessagingIntegrationAnalyticsView;
   };
 };
 
-function SetupMessagingIntegrationButton({
-  projectSlug,
-  refetchConfigs,
-  analyticsParams,
-}: Props) {
+function SetupMessagingIntegrationButton({refetchConfigs, analyticsParams}: Props) {
   const providerKeys = ['slack', 'discord', 'msteams'];
   const organization = useOrganization();
-
-  const onAddIntegration = () => {
-    projectQuery.refetch();
-    refetchConfigs();
-  };
-
-  const projectQuery = useApiQuery<ProjectWithAlertIntegrationInfo>(
-    [
-      `/projects/${organization.slug}/${projectSlug}/`,
-      {query: {expand: 'hasAlertIntegration'}},
-    ],
-    {staleTime: Infinity}
-  );
 
   // Only need to fetch the first provider to check if the feature is enabled, as all providers will return the same response
   const integrationQuery = useApiQuery<{providers: IntegrationProvider[]}>(
@@ -62,25 +39,7 @@ function SetupMessagingIntegrationButton({
 
   const {IntegrationFeatures} = getIntegrationFeatureGate();
 
-  const shouldRenderSetupButton =
-    projectQuery.data != null &&
-    !projectQuery.data.hasAlertIntegrationInstalled &&
-    integrationQuery.data != null;
-
-  useRouteAnalyticsParams({
-    setup_message_integration_button_shown: shouldRenderSetupButton,
-  });
-
-  if (
-    projectQuery.isPending ||
-    projectQuery.isError ||
-    integrationQuery.isPending ||
-    integrationQuery.isError
-  ) {
-    return null;
-  }
-
-  if (!shouldRenderSetupButton) {
+  if (integrationQuery.isPending || integrationQuery.isError) {
     return null;
   }
 
@@ -115,8 +74,7 @@ function SetupMessagingIntegrationButton({
                     headerContent={t('Connect with a messaging tool')}
                     bodyContent={t('Receive alerts and digests right where you work.')}
                     providerKeys={providerKeys}
-                    project={projectQuery.data}
-                    onAddIntegration={onAddIntegration}
+                    onAddIntegration={refetchConfigs}
                   />
                 ),
                 {
@@ -124,7 +82,6 @@ function SetupMessagingIntegrationButton({
                 }
               );
               trackAnalytics('onboarding.messaging_integration_modal_rendered', {
-                project_id: projectQuery.data.id,
                 organization,
                 ...analyticsParams,
               });

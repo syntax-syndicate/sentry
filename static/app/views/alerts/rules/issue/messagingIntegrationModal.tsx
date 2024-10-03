@@ -6,7 +6,6 @@ import type {ModalRenderProps} from 'sentry/actionCreators/modal';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {IntegrationProvider} from 'sentry/types/integrations';
-import type {Project} from 'sentry/types/project';
 import {useApiQueries} from 'sentry/utils/queryClient';
 import useOrganization from 'sentry/utils/useOrganization';
 import AddIntegrationRow from 'sentry/views/alerts/rules/issue/addIntegrationRow';
@@ -14,7 +13,6 @@ import {IntegrationContext} from 'sentry/views/settings/organizationIntegrations
 
 type Props = ModalRenderProps & {
   headerContent: React.ReactNode;
-  project: Project;
   providerKeys: string[];
   bodyContent?: React.ReactNode;
   onAddIntegration?: () => void;
@@ -27,7 +25,6 @@ function MessagingIntegrationModal({
   headerContent,
   bodyContent,
   providerKeys,
-  project,
   onAddIntegration,
 }: Props) {
   const organization = useOrganization();
@@ -74,7 +71,6 @@ function MessagingIntegrationModal({
                     view: 'messaging_integration_onboarding',
                   },
                   onAddIntegration: onAddIntegration,
-                  modalParams: {projectId: project.id},
                 }}
               >
                 <AddIntegrationRow onClick={closeModal} />
