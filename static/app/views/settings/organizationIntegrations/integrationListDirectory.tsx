@@ -50,6 +50,8 @@ import ReinstallAlert from 'sentry/views/settings/organizationIntegrations/reins
 
 import {POPULARITY_WEIGHT} from './constants';
 import IntegrationRow from './integrationRow';
+import useOrganization from 'sentry/utils/useOrganization';
+import {useApiQuery} from 'sentry/utils/queryClient';
 
 const FirstPartyIntegrationAlert = HookOrDefault({
   hookName: 'component:first-party-integration-alert',
@@ -86,6 +88,64 @@ type State = {
 };
 
 const TEXT_SEARCH_ANALYTICS_DEBOUNCE_IN_MS = 1000;
+
+function useIntegrationQueries() {
+  const organization = useOrganization();
+  const {data: config = {providers: []}} = useApiQuery<{
+    providers: IntegrationProvider[];
+  }>([`/organizations/${organization.slug}/config/integrations/`], {staleTime: 0});
+  const {data: integrations = []} = useApiQuery<Integration[]>(
+    [`/organizations/${organization.slug}/integrations/`, {query: {includeConfig: 0}}],
+    {staleTime: 0}
+  );
+  const {data: orgOwnedApps = []} = useApiQuery<SentryApp[]>(
+    [`/organizations/${organization.slug}/sentry-apps/`],
+    {staleTime: 0}
+  );
+  const {data: publishedApps = []} = useApiQuery<SentryApp[]>(
+    ['/sentry-apps/', {query: {status: 'published'}}],
+    {staleTime: 0}
+  );
+  const {data: appInstalls = []} = useApiQuery<SentryAppInstallation[]>(
+    [`/organizations/${organization.slug}/sentry-app-installations/`],
+    {staleTime: 0}
+  );
+  const {data: plugins = []} = useApiQuery<PluginWithProjectList[]>(
+    [`/organizations/${organization.slug}/plugins/configs/`],
+    {staleTime: 0}
+  );
+  const {data: docIntegrations = []} = useApiQuery<DocIntegration[]>(
+    ['/doc-integrations/'],
+    {staleTime: 0}
+  );
+
+  return {
+    config,
+    integrations,
+    orgOwnedApps,
+    publishedApps,
+    appInstalls,
+    plugins,
+    docIntegrations,
+  };
+}
+
+function BetterIntegrationListDirectory({hideHeader}: {hideHeader?: boolean}) {
+  const shouldReload = true;
+  const reloadOnVisible = true;
+  const shouldReloadOnVisible = true;
+
+  const organization = useOrganization();
+  const {
+    config,
+    integrations,
+    orgOwnedApps,
+    publishedApps,
+    appInstalls,
+    plugins,
+    docIntegrations,
+  } = useIntegrationQueries();
+}
 
 export class IntegrationListDirectory extends DeprecatedAsyncComponent<
   Props & DeprecatedAsyncComponent['props'],
