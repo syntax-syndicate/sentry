@@ -1,5 +1,5 @@
 ---
-created: '2024-09-26T00:13:17.180175+00:00'
+created: '2024-10-10T17:26:11.327180+00:00'
 creator: sentry
 source: tests/sentry/backup/test_comparators.py
 ---
@@ -10,6 +10,11 @@ source: tests/sentry/backup/test_comparators.py
     - organization_id
     - project_id
   model_name: feedback.feedback
+- comparators:
+  - class: ForeignKeyComparator
+    fields:
+    - organization_id
+  model_name: flags.flagauditlogmodel
 - comparators:
   - class: ForeignKeyComparator
     fields:
@@ -357,6 +362,11 @@ source: tests/sentry/backup/test_comparators.py
   - class: ForeignKeyComparator
     fields:
     - dashboard
+  model_name: sentry.dashboardpermissions
+- comparators:
+  - class: ForeignKeyComparator
+    fields:
+    - dashboard
     - project
   model_name: sentry.dashboardproject
 - comparators:
@@ -582,6 +592,7 @@ source: tests/sentry/backup/test_comparators.py
   - class: ForeignKeyComparator
     fields:
     - grouphash
+    - seer_matched_grouphash
   model_name: sentry.grouphashmetadata
 - comparators:
   - class: ForeignKeyComparator
@@ -1602,6 +1613,7 @@ source: tests/sentry/backup/test_comparators.py
 - comparators:
   - class: ForeignKeyComparator
     fields:
+    - environment
     - owner_team
     - owner_user_id
     - project
@@ -1686,6 +1698,15 @@ source: tests/sentry/backup/test_comparators.py
   - class: ForeignKeyComparator
     fields:
     - detector
+  model_name: workflow_engine.detectorstate
+- comparators:
+  - class: DateUpdatedComparator
+    fields:
+    - date_added
+    - date_updated
+  - class: ForeignKeyComparator
+    fields:
+    - detector
     - workflow
   model_name: workflow_engine.detectorworkflow
 - comparators:
@@ -1698,15 +1719,6 @@ source: tests/sentry/backup/test_comparators.py
     - organization
     - when_condition_group
   model_name: workflow_engine.workflow
-- comparators:
-  - class: DateUpdatedComparator
-    fields:
-    - date_added
-    - date_updated
-  - class: ForeignKeyComparator
-    fields:
-    - workflow
-  model_name: workflow_engine.workflowaction
 - comparators:
   - class: DateUpdatedComparator
     fields:

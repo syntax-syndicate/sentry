@@ -3,6 +3,7 @@ import {LocationFixture} from 'sentry-fixture/locationFixture';
 import {OrganizationFixture} from 'sentry-fixture/organization';
 import {ProjectFixture} from 'sentry-fixture/project';
 import {ReleaseFixture} from 'sentry-fixture/release';
+import {RouterFixture} from 'sentry-fixture/routerFixture';
 import {TeamFixture} from 'sentry-fixture/team';
 import {UserFixture} from 'sentry-fixture/user';
 
@@ -32,7 +33,9 @@ describe('UpdatedGroupHeader', () => {
     teams: [TeamFixture()],
   });
   const group = GroupFixture({issueCategory: IssueCategory.ERROR, isUnhandled: true});
-  const location = LocationFixture({query: {streamline: '1'}});
+  const router = RouterFixture({
+    location: LocationFixture({query: {streamline: '1'}}),
+  });
 
   describe('JS Project Error Issue', () => {
     const defaultProps = {
@@ -65,6 +68,10 @@ describe('UpdatedGroupHeader', () => {
       });
       MockApiClient.addMockResponse({
         url: `/organizations/${organization.slug}/issues/${group.id}/attachments/`,
+        body: [],
+      });
+      MockApiClient.addMockResponse({
+        url: `/organizations/${organization.slug}/users/`,
         body: [],
       });
     });
@@ -106,10 +113,11 @@ describe('UpdatedGroupHeader', () => {
           {...defaultProps}
           group={participantGroup}
           project={project}
+          event={null}
         />,
         {
           organization,
-          router: {location},
+          router,
         }
       );
 
@@ -156,10 +164,15 @@ describe('UpdatedGroupHeader', () => {
         body: {firstRelease, lastRelease: firstRelease},
       });
       render(
-        <StreamlinedGroupHeader {...defaultProps} group={group} project={project} />,
+        <StreamlinedGroupHeader
+          {...defaultProps}
+          group={group}
+          project={project}
+          event={null}
+        />,
         {
           organization,
-          router: {location},
+          router,
         }
       );
       expect(
@@ -177,10 +190,15 @@ describe('UpdatedGroupHeader', () => {
         features: ['issue-details-streamline'],
       });
       render(
-        <StreamlinedGroupHeader {...defaultProps} group={group} project={project} />,
+        <StreamlinedGroupHeader
+          {...defaultProps}
+          group={group}
+          project={project}
+          event={null}
+        />,
         {
           organization: flaggedOrganization,
-          router: {location},
+          router,
         }
       );
       expect(

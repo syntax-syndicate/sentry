@@ -1,4 +1,3 @@
-import {Component} from 'react';
 import {type RouteObject, RouterProvider, useRouteError} from 'react-router-dom';
 import {cache} from '@emotion/css'; // eslint-disable-line @emotion/no-vanilla
 import {CacheProvider, ThemeProvider} from '@emotion/react';
@@ -11,7 +10,6 @@ import {makeTestQueryClient} from 'sentry-test/queryClient';
 
 import {GlobalDrawer} from 'sentry/components/globalDrawer';
 import GlobalModal from 'sentry/components/globalModal';
-import {SentryPropTypeValidators} from 'sentry/sentryPropTypeValidators';
 import type {InjectedRouter} from 'sentry/types/legacyReactRouter';
 import type {Organization} from 'sentry/types/organization';
 import {QueryClientProvider} from 'sentry/utils/queryClient';
@@ -25,42 +23,43 @@ import {initializeOrg} from './initializeOrg';
 
 interface ProviderOptions {
   /**
+   * Do not shim the router use{Routes,Router,Navigate,Location} functions, and
+   * instead allow them to work as normal, rendering inside of a memory router.
+   *
+   * Wehn enabling this passing a `router` object *will do nothing*!
+   */
+  disableRouterMocks?: boolean;
+  /**
    * Sets the OrganizationContext. You may pass null to provide no organization
    */
   organization?: Partial<Organization> | null;
   /**
-   * Sets the RouterContext
+   * Sets the RouterContext.
    */
   router?: Partial<InjectedRouter>;
 }
 
 interface Options extends ProviderOptions, rtl.RenderOptions {}
 
-function makeAllTheProviders(providers: ProviderOptions) {
+function makeAllTheProviders(options: ProviderOptions) {
   const {organization, router} = initializeOrg({
-    organization: providers.organization === null ? undefined : providers.organization,
-    router: providers.router,
+    organization: options.organization === null ? undefined : options.organization,
+    router: options.router,
   });
 
-  class LegacyRouterProvider extends Component<{children?: React.ReactNode}> {
-    static childContextTypes = {
-      router: SentryPropTypeValidators.isObject,
-    };
-
-    getChildContext() {
-      return {router};
-    }
-
-    render() {
-      return this.props.children;
-    }
-  }
-
   // In some cases we may want to not provide an organization at all
-  const optionalOrganization = providers.organization === null ? null : organization;
+  const optionalOrganization = options.organization === null ? null : organization;
 
   return function ({children}: {children?: React.ReactNode}) {
     const content = (
+      <OrganizationContext.Provider value={optionalOrganization}>
+        <GlobalDrawer>{children}</GlobalDrawer>
+      </OrganizationContext.Provider>
+    );
+
+    const wrappedContent = options.disableRouterMocks ? (
+      content
+    ) : (
       <RouteContext.Provider
         value={{
           router,
@@ -69,41 +68,41 @@ function makeAllTheProviders(providers: ProviderOptions) {
           routes: router.routes,
         }}
       >
-        <OrganizationContext.Provider value={optionalOrganization}>
-          <GlobalDrawer>{children}</GlobalDrawer>
-        </OrganizationContext.Provider>
+        {content}
       </RouteContext.Provider>
     );
+
+    const history = createMemoryHistory();
 
     // Inject legacy react-router 3 style router mocked navigation functions
     // into the memory history used in react router 6
     //
     // TODO(epurkhiser): In a world without react-router 3 we should figure out
     // how to write our tests in a simpler way without all these shims
+    if (!options.disableRouterMocks) {
+      Object.defineProperty(history, 'location', {get: () => router.location});
+      history.replace = router.replace;
+      history.push = (path: any) => {
+        if (typeof path === 'object' && path.search) {
+          path.query = qs.parse(path.search);
+          delete path.search;
+          delete path.hash;
+          delete path.state;
+          delete path.key;
+        }
 
-    const history = createMemoryHistory();
-    Object.defineProperty(history, 'location', {get: () => router.location});
-    history.replace = router.replace;
-    history.push = (path: any) => {
-      if (typeof path === 'object' && path.search) {
-        path.query = qs.parse(path.search);
-        delete path.search;
-        delete path.hash;
-        delete path.state;
-        delete path.key;
-      }
+        // XXX(epurkhiser): This is a hack for react-router 3 to 6. react-router
+        // 6 will not convert objects into strings before pushing. We can detect
+        // this by looking for an empty hash, which we normally do not set for
+        // our browserHistory.push calls
+        if (typeof path === 'object' && path.hash === '') {
+          const queryString = path.query ? qs.stringify(path.query) : null;
+          path = `${path.pathname}${queryString ? `?${queryString}` : ''}`;
+        }
 
-      // XXX(epurkhiser): This is a hack for react-router 3 to 6. react-router
-      // 6 will not convert objects into strings before pushing. We can detect
-      // this by looking for an empty hash, which we normally do not set for
-      // our browserHistory.push calls
-      if (typeof path === 'object' && path.hash === '') {
-        const queryString = path.query ? qs.stringify(path.query) : null;
-        path = `${path.pathname}${queryString ? `?${queryString}` : ''}`;
-      }
-
-      router.push(path);
-    };
+        router.push(path);
+      };
+    }
 
     // By default react-router 6 catches exceptions and displays the stack
     // trace. For tests we want them to bubble out
@@ -114,7 +113,7 @@ function makeAllTheProviders(providers: ProviderOptions) {
     const routes: RouteObject[] = [
       {
         path: '*',
-        element: content,
+        element: wrappedContent,
         errorElement: <ErrorBoundary />,
       },
     ];
@@ -126,19 +125,13 @@ function makeAllTheProviders(providers: ProviderOptions) {
     }).initialize();
 
     return (
-      <LegacyRouterProvider>
-        <CacheProvider value={{...cache, compat: true}}>
-          <ThemeProvider theme={lightTheme}>
-            <QueryClientProvider client={makeTestQueryClient()}>
-              {window.__SENTRY_USING_REACT_ROUTER_SIX ? (
-                <RouterProvider router={memoryRouter} />
-              ) : (
-                content
-              )}
-            </QueryClientProvider>
-          </ThemeProvider>
-        </CacheProvider>
-      </LegacyRouterProvider>
+      <CacheProvider value={{...cache, compat: true}}>
+        <ThemeProvider theme={lightTheme}>
+          <QueryClientProvider client={makeTestQueryClient()}>
+            <RouterProvider router={memoryRouter} />
+          </QueryClientProvider>
+        </ThemeProvider>
+      </CacheProvider>
     );
   };
 }
@@ -154,11 +147,12 @@ function makeAllTheProviders(providers: ProviderOptions) {
  */
 function render(
   ui: React.ReactElement,
-  {router, organization, ...rtlOptions}: Options = {}
+  {router, organization, disableRouterMocks, ...rtlOptions}: Options = {}
 ) {
   const AllTheProviders = makeAllTheProviders({
     organization,
     router,
+    disableRouterMocks,
   });
 
   return rtl.render(ui, {wrapper: AllTheProviders, ...rtlOptions});

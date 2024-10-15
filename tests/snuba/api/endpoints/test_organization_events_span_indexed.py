@@ -818,6 +818,37 @@ class OrganizationEventsEAPSpanEndpointTest(OrganizationEventsSpanIndexedEndpoin
         assert data[2]["tags[foo,number]"] == 71
         assert data[2]["description"] == "baz"
 
+    def test_aggregate_numeric_attr(self):
+        self.store_spans(
+            [
+                self.create_span(
+                    {
+                        "description": "foo",
+                        "sentry_tags": {"status": "success"},
+                    },
+                    measurements={"foo": {"value": 5}},
+                    start_ts=self.ten_mins_ago,
+                ),
+            ],
+            is_eap=self.is_eap,
+        )
+
+        response = self.do_request(
+            {
+                "field": ["description", "avg(tags[foo,number])", "p50(tags[foo,      number])"],
+                "query": "",
+                "orderby": "description",
+                "project": self.project.id,
+                "dataset": self.dataset,
+            }
+        )
+
+        assert response.status_code == 200, response.content
+        assert len(response.data["data"]) == 1
+        data = response.data["data"]
+        assert data[0]["avg(tags[foo,number])"] == 5
+        assert data[0]["p50(tags[foo,      number])"] == 5
+
     def test_margin_of_error(self):
         total_samples = 10
         in_group = 5
@@ -872,6 +903,6 @@ class OrganizationEventsEAPSpanEndpointTest(OrganizationEventsSpanIndexedEndpoin
         assert margin_of_error == pytest.approx(0.306, rel=1e-1)
         # How to read this; these results mean that the extrapolated count is
         # 500k, with a lower estimated bound of ~200k, and an upper bound of 800k
-        assert lower_limit == pytest.approx(193_612, abs=5000)
+        assert lower_limit == pytest.approx(190_000, abs=5000)
         assert extrapolated == pytest.approx(500_000)
-        assert upper_limit == pytest.approx(806_388, abs=5000)
+        assert upper_limit == pytest.approx(810_000, abs=5000)

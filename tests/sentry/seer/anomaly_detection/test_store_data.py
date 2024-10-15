@@ -10,7 +10,7 @@ from sentry.snuba import errors, metrics_performance
 from sentry.snuba.dataset import Dataset
 from sentry.snuba.models import SnubaQuery
 from sentry.testutils.cases import BaseMetricsTestCase, PerformanceIssueTestCase
-from sentry.testutils.helpers.datetime import before_now, freeze_time, iso_format
+from sentry.testutils.helpers.datetime import before_now, freeze_time
 from sentry.testutils.performance_issues.event_generators import get_event
 from sentry.utils.snuba import SnubaTSResult
 from tests.sentry.incidents.endpoints.test_organization_alert_rule_index import AlertRuleBase
@@ -87,6 +87,29 @@ class AnomalyDetectionStoreDataTest(AlertRuleBase, BaseMetricsTestCase, Performa
         )
         assert result == expected_return_value
 
+    def test_anomaly_detection_format_historical_data_none_value(self):
+        """
+        Test that we don't end up with a None value, but rather 0.
+        """
+        expected_return_value = [
+            {"timestamp": self.time_1_ts, "value": 1},
+            {"timestamp": self.time_2_ts, "value": 0},
+        ]
+        snuba_raw_data = [
+            {"p95_measurements_fid": 1, "time": self.time_1_ts},
+            {"p95_measurements_fid": None, "time": self.time_2_ts},
+        ]
+        data = SnubaTSResult(
+            data={"data": snuba_raw_data}, start=self.time_1_dt, end=self.time_2_dt, rollup=3600
+        )
+        result = format_historical_data(
+            data=data,
+            query_columns=["p95_measurements_fid"],
+            dataset=errors,
+            organization=self.organization,
+        )
+        assert result == expected_return_value
+
     def test_anomaly_detection_fetch_historical_data(self):
         alert_rule = self.create_alert_rule(organization=self.organization, projects=[self.project])
         snuba_query = SnubaQuery.objects.get(id=alert_rule.snuba_query_id)
@@ -96,7 +119,7 @@ class AnomalyDetectionStoreDataTest(AlertRuleBase, BaseMetricsTestCase, Performa
                 data={
                     "event_id": "a" * 32,
                     "message": "super duper bad",
-                    "timestamp": iso_format(self.time_1_dt),
+                    "timestamp": self.time_1_dt.isoformat(),
                     "fingerprint": ["group1"],
                     "tags": {"sentry:user": self.user.email},
                     "exception": [{"value": "BadError"}],
@@ -107,7 +130,7 @@ class AnomalyDetectionStoreDataTest(AlertRuleBase, BaseMetricsTestCase, Performa
                 data={
                     "event_id": "b" * 32,
                     "message": "super bad",
-                    "timestamp": iso_format(self.time_2_dt),
+                    "timestamp": self.time_2_dt.isoformat(),
                     "fingerprint": ["group2"],
                     "tags": {"sentry:user": self.user.email},
                     "exception": [{"value": "BadError"}],
@@ -130,7 +153,7 @@ class AnomalyDetectionStoreDataTest(AlertRuleBase, BaseMetricsTestCase, Performa
                 data={
                     "event_id": "a" * 32,
                     "message": "super duper bad",
-                    "timestamp": iso_format(self.time_1_dt),
+                    "timestamp": self.time_1_dt.isoformat(),
                     "fingerprint": ["group1"],
                     "tags": {"sentry:user": self.user.email},
                     "exception": [{"value": "BadError"}],
@@ -141,7 +164,7 @@ class AnomalyDetectionStoreDataTest(AlertRuleBase, BaseMetricsTestCase, Performa
                 data={
                     "event_id": "b" * 32,
                     "message": "super bad",
-                    "timestamp": iso_format(self.time_2_dt),
+                    "timestamp": self.time_2_dt.isoformat(),
                     "fingerprint": ["group2"],
                     "tags": {"sentry:user": self.user.email},
                     "exception": [{"value": "BadError"}],

@@ -1,4 +1,5 @@
 import {render, screen, userEvent} from 'sentry-test/reactTestingLibrary';
+import {textWithMarkupMatcher} from 'sentry-test/utils';
 
 import {BigNumberWidget} from 'sentry/views/dashboards/widgets/bigNumberWidget/bigNumberWidget';
 
@@ -9,7 +10,6 @@ describe('BigNumberWidget', () => {
         <BigNumberWidget
           title="EPS"
           description="Number of events per second"
-          showDescriptionInTooltip={false}
           data={[
             {
               'eps()': 0.01087819860850493,
@@ -26,13 +26,45 @@ describe('BigNumberWidget', () => {
         />
       );
 
-      expect(screen.getByText('EPS')).toBeInTheDocument();
-      expect(screen.getByText('Number of events per second')).toBeInTheDocument();
       expect(screen.getByText('0.0109/s')).toBeInTheDocument();
     });
   });
 
   describe('Visualization', () => {
+    it('Explains missing data', () => {
+      render(
+        <BigNumberWidget
+          data={[{}]}
+          meta={{
+            fields: {
+              'p95(span.duration)': 'number',
+            },
+          }}
+        />
+      );
+
+      expect(screen.getByText('No Data')).toBeInTheDocument();
+    });
+
+    it('Explains non-numeric data', () => {
+      render(
+        <BigNumberWidget
+          data={[
+            {
+              'count()': Infinity,
+            },
+          ]}
+          meta={{
+            fields: {
+              'count()': 'number',
+            },
+          }}
+        />
+      );
+
+      expect(screen.getByText('Value is not a finite number.')).toBeInTheDocument();
+    });
+
     it('Formats duration data', () => {
       render(
         <BigNumberWidget
@@ -78,6 +110,27 @@ describe('BigNumberWidget', () => {
 
       expect(screen.getByText('178451214')).toBeInTheDocument();
     });
+
+    it('Respect maximum value', () => {
+      render(
+        <BigNumberWidget
+          title="Count"
+          data={[
+            {
+              'count()': 178451214,
+            },
+          ]}
+          maximumValue={100000000}
+          meta={{
+            fields: {
+              'count()': 'integer',
+            },
+          }}
+        />
+      );
+
+      expect(screen.getByText(textWithMarkupMatcher('>100m'))).toBeInTheDocument();
+    });
   });
 
   describe('State', () => {
@@ -87,10 +140,49 @@ describe('BigNumberWidget', () => {
       expect(screen.getByText('—')).toBeInTheDocument();
     });
 
+    it('Loading state takes precedence over error state', () => {
+      render(
+        <BigNumberWidget isLoading error={new Error('Parsing error of old value')} />
+      );
+
+      expect(screen.getByText('—')).toBeInTheDocument();
+    });
+
     it('Shows an error message', () => {
       render(<BigNumberWidget error={new Error('Uh oh')} />);
 
       expect(screen.getByText('Error: Uh oh')).toBeInTheDocument();
+    });
+
+    it('Shows a retry button', async () => {
+      const onRetry = jest.fn();
+
+      render(<BigNumberWidget error={new Error('Oh no!')} onRetry={onRetry} />);
+
+      await userEvent.click(screen.getByRole('button', {name: 'Retry'}));
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it('Hides other actions if there is an error and a retry handler', () => {
+      const onRetry = jest.fn();
+
+      render(
+        <BigNumberWidget
+          error={new Error('Oh no!')}
+          onRetry={onRetry}
+          actions={[
+            {
+              key: 'Open in Discover',
+              to: '/discover',
+            },
+          ]}
+        />
+      );
+
+      expect(screen.getByRole('button', {name: 'Retry'})).toBeInTheDocument();
+      expect(
+        screen.queryByRole('link', {name: 'Open in Discover'})
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -122,6 +214,96 @@ describe('BigNumberWidget', () => {
 
       expect(screen.getByText('14.23%')).toBeInTheDocument();
       expect(screen.getByText('3.05%')).toBeInTheDocument();
+    });
+  });
+
+  describe('Thresholds', () => {
+    it('Evaluates the current value against a threshold', () => {
+      render(
+        <BigNumberWidget
+          data={[
+            {
+              'eps()': 14.227123,
+            },
+          ]}
+          meta={{
+            fields: {
+              'eps()': 'rate',
+            },
+            units: {
+              'eps()': '1/second',
+            },
+          }}
+          thresholds={{
+            max_values: {
+              max1: 10,
+              max2: 20,
+            },
+            unit: '1/second',
+          }}
+        />
+      );
+
+      expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'meh');
+    });
+
+    it('Normalizes the units', () => {
+      render(
+        <BigNumberWidget
+          data={[
+            {
+              'mystery_error_rate()': 135, //  2.25/s
+            },
+          ]}
+          meta={{
+            fields: {
+              'mystery_error_rate()': 'rate',
+            },
+            units: {
+              'mystery_error_rate()': '1/minute',
+            },
+          }}
+          thresholds={{
+            max_values: {
+              max1: 2,
+              max2: 5,
+            },
+            unit: '1/second',
+          }}
+        />
+      );
+
+      expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'meh');
+    });
+
+    it('Respects the preferred polarity', () => {
+      render(
+        <BigNumberWidget
+          data={[
+            {
+              'mystery_error_rate()': 135,
+            },
+          ]}
+          meta={{
+            fields: {
+              'mystery_error_rate()': 'rate',
+            },
+            units: {
+              'mystery_error_rate()': '1/second',
+            },
+          }}
+          thresholds={{
+            max_values: {
+              max1: 200,
+              max2: 500,
+            },
+            unit: '1/second',
+          }}
+          preferredPolarity="-"
+        />
+      );
+
+      expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'good');
     });
   });
 });

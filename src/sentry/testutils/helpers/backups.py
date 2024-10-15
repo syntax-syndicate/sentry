@@ -65,6 +65,7 @@ from sentry.models.authidentity import AuthIdentity
 from sentry.models.authprovider import AuthProvider
 from sentry.models.counter import Counter
 from sentry.models.dashboard import Dashboard, DashboardTombstone
+from sentry.models.dashboard_permissions import DashboardPermissions
 from sentry.models.dashboard_widget import (
     DashboardWidget,
     DashboardWidgetQuery,
@@ -533,8 +534,11 @@ class ExhaustiveFixtures(Fixtures):
 
         # Dashboard
         dashboard = Dashboard.objects.create(
-            title=f"Dashboard 1 for {slug}", created_by_id=owner_id, organization=org
+            title=f"Dashboard 1 for {slug}",
+            created_by_id=owner_id,
+            organization=org,
         )
+        DashboardPermissions.objects.create(is_creator_only_editable=False, dashboard=dashboard)
         widget = DashboardWidget.objects.create(
             dashboard=dashboard,
             order=1,
@@ -613,9 +617,7 @@ class ExhaustiveFixtures(Fixtures):
         workflow = self.create_workflow(organization=org)
         detector = self.create_detector(organization=org)
         self.create_detector_workflow(detector=detector, workflow=workflow)
-
-        # TODO @saponifi3d: Delete this once the migration to remove the model is complete
-        self.create_workflow_action(workflow=workflow)
+        self.create_detector_state(detector=detector)
 
         notification_condition_group = self.create_data_condition_group(
             logic_type=DataConditionGroup.Type.ANY,
@@ -628,7 +630,7 @@ class ExhaustiveFixtures(Fixtures):
             condition_group=notification_condition_group,
         )
 
-        # TODO @saponifi3d: Update warning to be DetectorState.Critical
+        # TODO @saponifi3d: Update comparison to be DetectorState.Critical
         self.create_data_condition(
             condition="eq",
             comparison="critical",

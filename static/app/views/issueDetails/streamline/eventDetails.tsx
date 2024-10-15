@@ -4,15 +4,14 @@ import styled from '@emotion/styled';
 
 import Feature from 'sentry/components/acl/feature';
 import Alert from 'sentry/components/alert';
-import {CommitRow} from 'sentry/components/commitRow';
 import ErrorBoundary from 'sentry/components/errorBoundary';
-import {SuspectCommits} from 'sentry/components/events/suspectCommits';
 import {GroupSummary} from 'sentry/components/group/groupSummary';
 import {DatePageFilter} from 'sentry/components/organizations/datePageFilter';
 import {EnvironmentPageFilter} from 'sentry/components/organizations/environmentPageFilter';
 import {t} from 'sentry/locale';
 import {space} from 'sentry/styles/space';
 import type {MultiSeriesEventsStats} from 'sentry/types/organization';
+import {useIsStuck} from 'sentry/utils/useIsStuck';
 import {useLocation} from 'sentry/utils/useLocation';
 import useMedia from 'sentry/utils/useMedia';
 import {useNavigate} from 'sentry/utils/useNavigate';
@@ -37,11 +36,8 @@ import {
   useIssueDetailsDiscoverQuery,
   useIssueDetailsEventView,
 } from 'sentry/views/issueDetails/streamline/useIssueDetailsDiscoverQuery';
-
-const enum EventPageContent {
-  EVENT = 'event',
-  LIST = 'list',
-}
+import {Tab} from 'sentry/views/issueDetails/types';
+import {useGroupDetailsRoute} from 'sentry/views/issueDetails/useGroupDetailsRoute';
 
 export function EventDetails({
   group,
@@ -55,14 +51,12 @@ export function EventDetails({
   const isScreenMedium = useMedia(`(max-width: ${theme.breakpoints.medium})`);
   const {environments} = selection;
   const [nav, setNav] = useState<HTMLDivElement | null>(null);
+  const isStuck = useIsStuck(nav);
   const {eventDetails, dispatch} = useEventDetailsReducer();
 
   const searchQuery = useEventQuery({group});
   const eventView = useIssueDetailsEventView({group});
-
-  const [pageContent, setPageContent] = useState<EventPageContent>(
-    EventPageContent.EVENT
-  );
+  const {currentTab} = useGroupDetailsRoute();
 
   const {
     data: groupStats,
@@ -90,17 +84,6 @@ export function EventDetails({
       <Feature features={['organizations:ai-summary']}>
         <GroupSummary groupId={group.id} groupCategory={group.issueCategory} />
       </Feature>
-      <PageErrorBoundary
-        mini
-        message={t('There was an error loading the suspect commits')}
-      >
-        <SuspectCommits
-          project={project}
-          eventId={event.id}
-          group={group}
-          commitRow={CommitRow}
-        />
-      </PageErrorBoundary>
       <PageErrorBoundary mini message={t('There was an error loading the event filter')}>
         <FilterContainer>
           <EnvironmentPageFilter />
@@ -137,18 +120,15 @@ export function EventDetails({
           )}
         </PageErrorBoundary>
       )}
-      {pageContent === EventPageContent.LIST && (
+      {/* TODO(issues): We should use the router for this */}
+      {currentTab === Tab.EVENTS && (
         <PageErrorBoundary mini message={t('There was an error loading the event list')}>
           <GroupContent>
-            <EventList
-              group={group}
-              project={project}
-              onClose={() => setPageContent(EventPageContent.EVENT)}
-            />
+            <EventList group={group} project={project} />
           </GroupContent>
         </PageErrorBoundary>
       )}
-      {pageContent === EventPageContent.EVENT && (
+      {currentTab !== Tab.EVENTS && (
         <PageErrorBoundary
           mini
           message={t('There was an error loading the event content')}
@@ -159,7 +139,7 @@ export function EventDetails({
               group={group}
               ref={setNav}
               query={searchQuery}
-              onViewAllEvents={() => setPageContent(EventPageContent.LIST)}
+              data-stuck={isStuck}
             />
             <ContentPadding>
               <EventDetailsContent group={group} event={event} project={project} />
@@ -197,6 +177,10 @@ const FloatingEventNavigation = styled(EventNavigation)`
   background: ${p => p.theme.background};
   z-index: 500;
   border-radius: ${p => p.theme.borderRadiusTop};
+
+  &[data-stuck='true'] {
+    border-radius: 0;
+  }
 `;
 
 const ExtraContent = styled('div')`

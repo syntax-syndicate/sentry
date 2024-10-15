@@ -4,6 +4,9 @@
     "sentry.organization",
     "sentry.project"
   ],
+  "flags.flagauditlogmodel": [
+    "sentry.organization"
+  ],
   "hybridcloud.apikeyreplica": [
     "sentry.apikey",
     "sentry.organization"
@@ -189,6 +192,9 @@
   "sentry.dashboard": [
     "sentry.organization",
     "sentry.user"
+  ],
+  "sentry.dashboardpermissions": [
+    "sentry.dashboard"
   ],
   "sentry.dashboardproject": [
     "sentry.dashboard",
@@ -850,6 +856,7 @@
     "sentry.user"
   ],
   "uptime.projectuptimesubscription": [
+    "sentry.environment",
     "sentry.project",
     "sentry.team",
     "sentry.user",
@@ -880,6 +887,9 @@
     "sentry.user",
     "workflow_engine.dataconditiongroup"
   ],
+  "workflow_engine.detectorstate": [
+    "workflow_engine.detector"
+  ],
   "workflow_engine.detectorworkflow": [
     "workflow_engine.detector",
     "workflow_engine.workflow"
@@ -887,9 +897,6 @@
   "workflow_engine.workflow": [
     "sentry.organization",
     "workflow_engine.dataconditiongroup"
-  ],
-  "workflow_engine.workflowaction": [
-    "workflow_engine.workflow"
   ],
   "workflow_engine.workflowdataconditiongroup": [
     "workflow_engine.dataconditiongroup",
