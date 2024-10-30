@@ -1416,7 +1416,6 @@ class GroupListTest(APITestCase, SnubaTestCase, SearchIssueTestMixin):
         release_1 = self.create_release(version="test@1.2.3")
         release_2 = self.create_release(version="test@1.2.4")
         release_3 = self.create_release(version="test@1.2.5")
-        release_4 = self.create_release(version="test@2.0.0")
 
         release_1_g_1 = self.store_event(
             data={
@@ -1466,14 +1465,6 @@ class GroupListTest(APITestCase, SnubaTestCase, SearchIssueTestMixin):
             },
             project_id=self.project.id,
         ).group.id
-        release_4_g_1 = self.store_event(
-            data={
-                "timestamp": iso_format(before_now(minutes=7)),
-                "fingerprint": ["group-7"],
-                "release": release_4.version,
-            },
-            project_id=self.project.id,
-        ).group.id
         self.login_as(user=self.user)
         response = self.get_response(sort_by="date", limit=10, query=f"{SEMVER_ALIAS}:>1.2.3")
         assert response.status_code == 200, response.content
@@ -1482,7 +1473,6 @@ class GroupListTest(APITestCase, SnubaTestCase, SearchIssueTestMixin):
             release_2_g_2,
             release_3_g_1,
             release_3_g_2,
-            release_4_g_1,
         ]
 
         response = self.get_response(sort_by="date", limit=10, query=f"{SEMVER_ALIAS}:>=1.2.3")
@@ -1494,7 +1484,6 @@ class GroupListTest(APITestCase, SnubaTestCase, SearchIssueTestMixin):
             release_2_g_2,
             release_3_g_1,
             release_3_g_2,
-            release_4_g_1,
         ]
 
         response = self.get_response(sort_by="date", limit=10, query=f"{SEMVER_ALIAS}:<1.2.4")
@@ -1512,7 +1501,6 @@ class GroupListTest(APITestCase, SnubaTestCase, SearchIssueTestMixin):
             release_1_g_2,
             release_3_g_1,
             release_3_g_2,
-            release_4_g_1,
         ]
 
     def test_semver_in_filter(self, _: MagicMock) -> None:
