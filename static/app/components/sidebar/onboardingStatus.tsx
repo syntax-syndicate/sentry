@@ -52,6 +52,7 @@ export default function OnboardingStatus({
     if (!walkthrough && !isActive === true) {
       trackAnalytics('quick_start.opened', {
         organization: org,
+        new_experience: false,
       });
     }
     onShowPanel();
@@ -63,9 +64,7 @@ export default function OnboardingStatus({
     onboardingContext,
   });
 
-  const allDisplayedTasks = tasks
-    .filter(task => task.display)
-    .filter(task => !task.renderCard);
+  const allDisplayedTasks = tasks.filter(task => task.display);
 
   const doneTasks = allDisplayedTasks.filter(isDone);
   const numberRemaining = allDisplayedTasks.length - doneTasks.length;
@@ -87,6 +86,7 @@ export default function OnboardingStatus({
     trackAnalytics('quick_start.completed', {
       organization: org,
       referrer: 'onboarding_sidebar',
+      new_experience: false,
     });
   }, [isActive, allTasksCompleted, org]);
 
