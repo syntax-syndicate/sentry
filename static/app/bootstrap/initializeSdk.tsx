@@ -195,6 +195,12 @@ export function initializeSdk(config: Config) {
         event.contexts.flags = flags;
       }
 
+      if (event.transaction) {
+        if (event.transaction.startsWith('//')) {
+          event.transaction = event.transaction.substring(1);
+        }
+      }
+
       return event;
     },
   });
