@@ -102,12 +102,13 @@ class MetricAlertDetails extends Component<Props, State> {
   getTimePeriod(selectedIncident: Incident | null): TimePeriodType {
     const {location} = this.props;
     const {rule} = this.state;
+    const isDynamicAlert = rule?.detectionType === AlertRuleComparisonType.DYNAMIC;
     let period = location.query.period as string | undefined;
     if (!period) {
       // Default to 28d view for dynamic alert rules! Anomaly detection
       // is evaluated against 28d of historical data, so incidents should
       // be presented in that same context for clarity
-      if (rule?.detectionType === AlertRuleComparisonType.DYNAMIC) {
+      if (isDynamicAlert) {
         period = TimePeriod.TWENTY_EIGHT_DAYS;
       } else {
         period = TimePeriod.SEVEN_DAYS;
@@ -132,7 +133,7 @@ class MetricAlertDetails extends Component<Props, State> {
       };
     }
 
-    if (location.query.alert && selectedIncident) {
+    if (!isDynamicAlert && location.query.alert && selectedIncident) {
       const {start, end} = buildMetricGraphDateRange(selectedIncident);
       return {
         start,
