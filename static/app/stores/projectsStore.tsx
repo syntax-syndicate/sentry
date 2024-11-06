@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import {createStore} from 'reflux';
 
 import {fetchOrganizationDetails} from 'sentry/actionCreators/organization';
@@ -62,12 +63,21 @@ const storeConfig: ProjectsStoreDefinition = {
   },
 
   loadInitialData(items: Project[]) {
+    // XXX: JAVASCRIPT-2TVY indicates that something that isn't an array is getting loaded here causing problems.
+    if (!Array.isArray(items)) {
+      Sentry.withScope(scope => {
+        scope.captureMessage('Invalid value attempted to load into ProjectsStore');
+      });
+    }
+
+    const loadItems = Array.isArray(items) ? items : [];
+
     this.state = {
-      projects: items.toSorted((a, b) => a.slug.localeCompare(b.slug)),
+      projects: loadItems.toSorted((a, b) => a.slug.localeCompare(b.slug)),
       loading: false,
     };
 
-    this.trigger(new Set(items.map(x => x.id)));
+    this.trigger(new Set(loadItems.map(x => x.id)));
   },
 
   onChangeSlug(prevSlug: string, newSlug: string) {
