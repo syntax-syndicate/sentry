@@ -8,13 +8,18 @@ from sentry.integrations.models.integration_feature import IntegrationFeature, I
 from sentry.users.models.user import User
 
 
-class DocIntegrationSerializerResponse(TypedDict):
+class DocIntegrationSerializerResponseOptional(TypedDict, total=False):
+    resources: list[dict[str, str]]
+
+
+class DocIntegrationSerializerResponse(DocIntegrationSerializerResponseOptional):
     name: str
+    slug: str
     author: str
     description: str
     url: str
     popularity: int | None
-    is_draft: bool
+    isDraft: bool
     features: list[dict[str, Any]]
     avatar: dict[str, str | None]
 

@@ -31,11 +31,11 @@ class DocIntegrationsEndpoint(DocIntegrationsBaseEndpoint):
     owner = ApiOwner.INTEGRATIONS
     publish_status = {
         "GET": ApiPublishStatus.PUBLIC,
-        "POST": ApiPublishStatus.PUBLIC,
+        "POST": ApiPublishStatus.PRIVATE,
     }
 
     @extend_schema(
-        operation_id="Fetch all document based integrations",
+        operation_id="Fetch All Document Based Integrations",
         parameters=[],
         request=None,
         responses={
@@ -45,6 +45,9 @@ class DocIntegrationsEndpoint(DocIntegrationsBaseEndpoint):
         },
     )
     def get(self, request: Request):
+        """
+        Fetch paginated list of all available document based integrations.
+        """
         # TODO(schew2381): Change to is_active_staff once the feature flag is rolled out.
         if has_elevated_mode(request):
             queryset = DocIntegration.objects.all()
@@ -58,12 +61,15 @@ class DocIntegrationsEndpoint(DocIntegrationsBaseEndpoint):
         )
 
     @extend_schema(
-        operation_id="Add a document based integration",
+        operation_id="Add a Document Based Integration",
         parameters=[],
         request=DocIntegrationSerializer,
         responses={201: DocIntegrationSerializer, 400: RESPONSE_BAD_REQUEST},
     )
     def post(self, request: Request):
+        """
+        Add a document based integration.
+        """
         # Override any incoming JSON for these fields
         data = request.json_body
         data["is_draft"] = True
