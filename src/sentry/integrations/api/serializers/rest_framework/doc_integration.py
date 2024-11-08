@@ -37,15 +37,25 @@ class MetadataField(serializers.JSONField):
 
 @extend_schema_serializer
 class DocIntegrationSerializer(Serializer):
-    name = serializers.CharField(max_length=255, help_text="The name of the integration.")
-    author = serializers.CharField(max_length=255)
-    description = serializers.CharField()
-    url = URLField()
-    popularity = serializers.IntegerField(min_value=0, max_value=32767, allow_null=True)
-    is_draft = serializers.BooleanField(default=True)
-    metadata = MetadataField(allow_null=True, required=False)
+    name = serializers.CharField(max_length=255, help_text="The name of your integration.")
+    author = serializers.CharField(max_length=255, help_text="The author of your integration.")
+    description = serializers.CharField(help_text="A description of your integration.")
+    url = URLField(help_text="The URL to your integration.")
+    popularity = serializers.IntegerField(
+        min_value=0, max_value=32767, allow_null=True, help_text="Popularity of your integration."
+    )
+    is_draft = serializers.BooleanField(
+        default=True, help_text="Whether your integration is a draft."
+    )
+    metadata = MetadataField(
+        allow_null=True, required=False, help_text="Metadata for your integration."
+    )
     features = serializers.MultipleChoiceField(
-        choices=Feature.as_choices(), allow_blank=True, allow_null=True, required=False
+        choices=Feature.as_choices(),
+        allow_blank=True,
+        allow_null=True,
+        required=False,
+        help_text="Features of your integration.",
     )
 
     def validate_name(self, value: str) -> str:

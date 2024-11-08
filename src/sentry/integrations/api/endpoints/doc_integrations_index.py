@@ -15,7 +15,7 @@ from sentry.apidocs.utils import inline_sentry_response_serializer
 from sentry.auth.elevated_mode import has_elevated_mode
 from sentry.integrations.api.bases.doc_integrations import DocIntegrationsBaseEndpoint
 from sentry.integrations.api.serializers.models.doc_integration import (
-    DocIntegrationSerializer as DocIntegrationOutputSerializer,
+    DocIntegrationSerializerResponse,
 )
 from sentry.integrations.api.serializers.rest_framework.doc_integration import (
     DocIntegrationSerializer,
@@ -40,7 +40,7 @@ class DocIntegrationsEndpoint(DocIntegrationsBaseEndpoint):
         request=None,
         responses={
             200: inline_sentry_response_serializer(
-                "ListDocIntegrationResponse", list[DocIntegrationOutputSerializer]
+                "ListDocIntegrationResponse", list[DocIntegrationSerializerResponse]
             ),
         },
     )

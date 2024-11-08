@@ -1,11 +1,22 @@
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, TypedDict
 
 from sentry.api.serializers import Serializer, register, serialize
 from sentry.integrations.models.doc_integration import DocIntegration
 from sentry.integrations.models.doc_integration_avatar import DocIntegrationAvatar
 from sentry.integrations.models.integration_feature import IntegrationFeature, IntegrationTypes
 from sentry.users.models.user import User
+
+
+class DocIntegrationSerializerResponse(TypedDict):
+    name: str
+    author: str
+    description: str
+    url: str
+    popularity: int | None
+    is_draft: bool
+    features: list[dict[str, Any]]
+    avatar: dict[str, str | None]
 
 
 @register(DocIntegration)
@@ -35,7 +46,7 @@ class DocIntegrationSerializer(Serializer):
         attrs: Mapping[str, Any],
         user: User,
         **kwargs: Any,
-    ) -> Any:
+    ) -> DocIntegrationSerializerResponse:
         features = attrs.get("features")
         data = {
             "name": obj.name,
