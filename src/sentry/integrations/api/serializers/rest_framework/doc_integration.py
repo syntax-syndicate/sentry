@@ -15,6 +15,7 @@ from sentry.integrations.models.integration_feature import (
     IntegrationFeature,
     IntegrationTypes,
 )
+from sentry.monitors.validators import extend_schema_serializer
 from sentry.sentry_apps.api.parsers.sentry_app import URLField
 
 
@@ -34,8 +35,9 @@ class MetadataField(serializers.JSONField):
         return validated_data
 
 
+@extend_schema_serializer
 class DocIntegrationSerializer(Serializer):
-    name = serializers.CharField(max_length=255)
+    name = serializers.CharField(max_length=255, help_text="The name of the integration.")
     author = serializers.CharField(max_length=255)
     description = serializers.CharField()
     url = URLField()

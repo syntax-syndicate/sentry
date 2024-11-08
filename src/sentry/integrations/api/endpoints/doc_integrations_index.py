@@ -1,5 +1,6 @@
 import logging
 
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -9,8 +10,13 @@ from sentry.api.api_publish_status import ApiPublishStatus
 from sentry.api.base import control_silo_endpoint
 from sentry.api.paginator import OffsetPaginator
 from sentry.api.serializers import serialize
+from sentry.apidocs.constants import RESPONSE_BAD_REQUEST
+from sentry.apidocs.utils import inline_sentry_response_serializer
 from sentry.auth.elevated_mode import has_elevated_mode
 from sentry.integrations.api.bases.doc_integrations import DocIntegrationsBaseEndpoint
+from sentry.integrations.api.serializers.models.doc_integration import (
+    DocIntegrationSerializer as DocIntegrationOutputSerializer,
+)
 from sentry.integrations.api.serializers.rest_framework.doc_integration import (
     DocIntegrationSerializer,
 )
@@ -19,14 +25,25 @@ from sentry.integrations.models.doc_integration import DocIntegration
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(tags=["Integrations"])
 @control_silo_endpoint
 class DocIntegrationsEndpoint(DocIntegrationsBaseEndpoint):
     owner = ApiOwner.INTEGRATIONS
     publish_status = {
-        "GET": ApiPublishStatus.UNKNOWN,
-        "POST": ApiPublishStatus.UNKNOWN,
+        "GET": ApiPublishStatus.PUBLIC,
+        "POST": ApiPublishStatus.PUBLIC,
     }
 
+    @extend_schema(
+        operation_id="Fetch all document based integrations",
+        parameters=[],
+        request=None,
+        responses={
+            200: inline_sentry_response_serializer(
+                "ListDocIntegrationResponse", list[DocIntegrationOutputSerializer]
+            ),
+        },
+    )
     def get(self, request: Request):
         # TODO(schew2381): Change to is_active_staff once the feature flag is rolled out.
         if has_elevated_mode(request):
@@ -40,6 +57,12 @@ class DocIntegrationsEndpoint(DocIntegrationsBaseEndpoint):
             on_results=lambda x: serialize(x, request.user, access=request.access),
         )
 
+    @extend_schema(
+        operation_id="Add a document based integration",
+        parameters=[],
+        request=DocIntegrationSerializer,
+        responses={201: DocIntegrationSerializer, 400: RESPONSE_BAD_REQUEST},
+    )
     def post(self, request: Request):
         # Override any incoming JSON for these fields
         data = request.json_body
