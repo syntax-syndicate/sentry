@@ -82,11 +82,9 @@ def get_docker_client() -> Generator[docker.DockerClient]:
             if DARWIN:
                 if USE_COLIMA:
                     click.echo("Attempting to start colima...")
-                    gitroot = _gitroot()
                     subprocess.check_call(
                         (
-                            # explicitly use repo-local devenv, not the global one
-                            f"{gitroot}/.venv/bin/devenv",
+                            "devenv",
                             "colima",
                             "start",
                         )
