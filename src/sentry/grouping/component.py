@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Generator, Iterator, Sequence
 from typing import Any, Self
 
@@ -34,7 +34,6 @@ class BaseGroupingComponent[ValuesType: str | int | BaseGroupingComponent[Any]](
     into components to make a hash for grouping purposes.
     """
 
-    id: str = "default"
     hint: str | None = None
     contributes: bool = False
     values: Sequence[ValuesType]
@@ -53,6 +52,10 @@ class BaseGroupingComponent[ValuesType: str | int | BaseGroupingComponent[Any]](
             contributes=contributes,
             values=values or [],
         )
+
+    @property
+    @abstractmethod
+    def id(self) -> str: ...
 
     @property
     def name(self) -> str | None:
