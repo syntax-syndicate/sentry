@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, NotRequired, TypedDict
+from typing import TYPE_CHECKING, NotRequired, TypedDict
 
-from sentry.grouping.component import BaseGroupingComponent
+from sentry.grouping.component import (
+    AppGroupingComponent,
+    DefaultGroupingComponent,
+    SystemGroupingComponent,
+)
 from sentry.grouping.utils import hash_from_values, is_default_fingerprint_var
 from sentry.types.misc import KeyedList
 
@@ -124,7 +128,11 @@ class ComponentVariant(BaseVariant):
 
     type = "component"
 
-    def __init__(self, component, config):
+    def __init__(
+        self,
+        component: AppGroupingComponent | SystemGroupingComponent | DefaultGroupingComponent,
+        config: StrategyConfiguration,
+    ):
         self.component = component
         self.config = config
 
@@ -204,7 +212,7 @@ class SaltedComponentVariant(ComponentVariant):
     def __init__(
         self,
         values: Fingerprint,
-        component: BaseGroupingComponent[Any],
+        component: AppGroupingComponent | SystemGroupingComponent | DefaultGroupingComponent,
         config: StrategyConfiguration,
         fingerprint_info: FingerprintInfo,
     ):
