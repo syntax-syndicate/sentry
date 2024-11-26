@@ -44,10 +44,13 @@ from sentry.backup.scopes import ExportScope
 from sentry.backup.validate import validate
 from sentry.data_secrecy.models import DataSecrecyWaiver
 from sentry.db.models.paranoia import ParanoidModel
+
 <<<<<<< HEAD
 from sentry.incidents.models.alert_rule import AlertRuleMonitorTypeInt
+
 =======
 from sentry.incidents.models.alert_rule import AlertRuleExcludedProjects, AlertRuleTriggerExclusion
+
 >>>>>>> e126adc39ca (remove from fixtures)
 from sentry.incidents.models.incident import (
     IncidentActivity,
