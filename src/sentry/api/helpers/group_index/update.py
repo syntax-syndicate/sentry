@@ -46,6 +46,7 @@ from sentry.models.groupsubscription import GroupSubscription
 from sentry.models.grouptombstone import TOMBSTONE_FIELDS_FROM_GROUP, GroupTombstone
 from sentry.models.project import Project
 from sentry.models.release import Release, follows_semver_versioning_scheme
+from sentry.models.team import Team
 from sentry.notifications.types import SUBSCRIPTION_REASON_MAP, GroupSubscriptionReason
 from sentry.signals import issue_resolved
 from sentry.types.activity import ActivityType
@@ -234,6 +235,9 @@ def update_groups(
 
         group_list = list(cursor_result)
         group_ids = [g.id for g in group_list]
+
+    if group_list is None:
+        return Response({"detail": "No groups found"}, status=404)
 
     group_project_ids = {g.project_id for g in group_list}
     # filter projects down to only those that have groups in the search results
@@ -657,7 +661,7 @@ def merge_groups(
 def handle_other_status_updates(
     result: Mapping[str, Any],
     group_list: Sequence[Group],
-    group_ids: Sequence[Group],
+    group_ids: Sequence[int],
     projects: Sequence[Project],
     project_lookup: Mapping[int, Project],
     status_details: Mapping[str, Any],
@@ -704,13 +708,13 @@ def handle_other_status_updates(
             status_details=result.get("statusDetails", {}),
             sender=update_groups,
         )
-    return result
+    return dict(result)
 
 
 def prepare_response(
-    result: Mapping[str, Any],
+    result: dict[str, Any],
     group_list: Sequence[Group],
-    group_ids: Sequence[Group],
+    group_ids: Sequence[int],
     project_lookup: Mapping[int, Project],
     projects: Sequence[Project],
     acting_user: User,
@@ -841,7 +845,7 @@ def get_semver_releases(project: Project) -> QuerySet[Release]:
 def handle_is_subscribed(
     is_subscribed: bool,
     group_list: Sequence[Group],
-    project_lookup: dict[int, Any],
+    project_lookup: Mapping[int, Project],
     acting_user: User,
 ) -> dict[str, str]:
     # TODO(dcramer): we could make these more efficient by first
@@ -867,10 +871,10 @@ def handle_is_subscribed(
 
 def handle_is_bookmarked(
     is_bookmarked: bool,
-    group_list: Sequence[Group] | None,
-    group_ids: Sequence[Group],
-    project_lookup: dict[int, Project],
-    acting_user: User | None,
+    group_list: Sequence[Group],
+    group_ids: Sequence[int],
+    project_lookup: Mapping[int, Project],
+    acting_user: User | RpcUser | Team | None,
 ) -> None:
     """
     Creates bookmarks and subscriptions for a user, or deletes the existing bookmarks and subscriptions.
@@ -882,13 +886,16 @@ def handle_is_bookmarked(
                 group=group,
                 user_id=acting_user.id if acting_user else None,
             )
-            GroupSubscription.objects.subscribe(
-                subscriber=acting_user, group=group, reason=GroupSubscriptionReason.bookmark
-            )
-    elif is_bookmarked is False:
+            if acting_user:
+                GroupSubscription.objects.subscribe(
+                    subscriber=acting_user,
+                    group=group,
+                    reason=GroupSubscriptionReason.bookmark,
+                )
+    elif is_bookmarked is False and acting_user is not None:
         GroupBookmark.objects.filter(
             group__in=group_ids,
-            user_id=acting_user.id if acting_user else None,
+            user_id=acting_user.id,
         ).delete()
         if group_list:
             GroupSubscription.objects.filter(
@@ -898,10 +905,10 @@ def handle_is_bookmarked(
 
 
 def handle_has_seen(
-    has_seen: Any,
+    has_seen: bool | None,
     group_list: Sequence[Group],
-    group_ids: Sequence[Group],
-    project_lookup: dict[int, Project],
+    group_ids: Sequence[int],
+    project_lookup: Mapping[int, Project],
     projects: Sequence[Project],
     acting_user: User | None,
 ) -> None:
@@ -922,7 +929,7 @@ def handle_has_seen(
                     project=project_lookup[group.project_id],
                     values={"last_seen": django_timezone.now()},
                 )
-    elif has_seen is False:
+    elif has_seen is False and user_id is not None:
         GroupSeen.objects.filter(group__in=group_ids, user_id=user_id).delete()
 
 
@@ -930,7 +937,7 @@ def handle_priority(
     priority: str,
     group_list: Sequence[Group],
     actor: User | None,
-    project_lookup: dict[int, Project],
+    project_lookup: Mapping[int, Project],
 ) -> None:
     for group in group_list:
         priority_value = PriorityLevel.from_str(priority) if priority else None
@@ -947,8 +954,8 @@ def handle_priority(
 
 def handle_is_public(
     is_public: bool,
-    group_list: list[Group],
-    project_lookup: dict[int, Project],
+    group_list: Sequence[Group],
+    project_lookup: Mapping[int, Project],
     acting_user: User | None,
 ) -> str | None:
     """
@@ -991,8 +998,8 @@ def handle_assigned_to(
     assigned_actor: Actor,
     assigned_by: str | None,
     integration: str | None,
-    group_list: list[Group],
-    project_lookup: dict[int, Project],
+    group_list: Sequence[Group],
+    project_lookup: Mapping[int, Project],
     acting_user: User | None,
 ) -> ActorSerializerResponse | None:
     """
