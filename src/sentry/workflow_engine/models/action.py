@@ -1,27 +1,10 @@
-from enum import StrEnum
-
 from django.db import models
 
 from sentry.backup.scopes import RelocationScope
 from sentry.db.models import DefaultFieldsModel, region_silo_model, sane_repr
 from sentry.db.models.fields.hybrid_cloud_foreign_key import HybridCloudForeignKey
 from sentry.notifications.models.notificationaction import ActionTarget
-
-
-class NotificationType(StrEnum):
-    Slack = "SLACK"
-    Discord = "DISCORD"
-    MSTeams = "MSTEAMS"
-    PagerDuty = "PAGERDUTY"
-    Opsgenie = "OPSGENIE"
-    GitHub = "GITHUB"
-    GithubEnterprise = "GITHUBENTERPRISE"
-    Gitlab = "Gitlab"
-    Jira = "JIRA"
-    JiraServer = "JIRASERVER"
-    AzureDevOps = "AZUREDEVOPS"
-    SentryApp = "SENTRYAPP"
-    Email = "EMAIL"
+from sentry.workflow_engine.actions.notification_action.types import NotificationType
 
 
 @region_silo_model
@@ -39,34 +22,34 @@ class Action(DefaultFieldsModel):
 
     # TODO (@saponifi3d): Don't hardcode these values, and these are incomplete values
     class Type(models.TextChoices):
-        NOTIFICATION_SLACK = f"notification_{NotificationType.Slack}", "Slack Notification"
-        NOTIFICATION_DISCORD = f"notification_{NotificationType.Discord}", "Discord Notification"
-        NOTIFICATION_MSTEAMS = f"notification_{NotificationType.MSTeams}", "MS Teams Notification"
+        NOTIFICATION_SLACK = f"notification.{NotificationType.Slack}", "Slack Notification"
+        NOTIFICATION_DISCORD = f"notification.{NotificationType.Discord}", "Discord Notification"
+        NOTIFICATION_MSTEAMS = f"notification.{NotificationType.MSTeams}", "MS Teams Notification"
         NOTIFICATION_PAGERDUTY = (
-            f"notification_{NotificationType.PagerDuty}",
+            f"notification.{NotificationType.PagerDuty}",
             "PagerDuty Notification",
         )
-        NOTIFICATION_OPSGENIE = f"notification_{NotificationType.Opsgenie}", "Opsgenie Notification"
-        NOTIFICATION_GITHUB = f"notification_{NotificationType.GitHub}", "GitHub Notification"
+        NOTIFICATION_OPSGENIE = f"notification.{NotificationType.Opsgenie}", "Opsgenie Notification"
+        NOTIFICATION_GITHUB = f"notification.{NotificationType.GitHub}", "GitHub Notification"
         NOTIFICATION_GITHUB_ENTERPRISE = (
-            f"notification_{NotificationType.GithubEnterprise}",
+            f"notification.{NotificationType.GithubEnterprise}",
             "GitHub Enterprise Notification",
         )
-        NOTIFICATION_GITLAB = f"notification_{NotificationType.Gitlab}", "GitLab Notification"
-        NOTIFICATION_JIRA = f"notification_{NotificationType.Jira}", "Jira Notification"
+        NOTIFICATION_GITLAB = f"notification.{NotificationType.Gitlab}", "GitLab Notification"
+        NOTIFICATION_JIRA = f"notification.{NotificationType.Jira}", "Jira Notification"
         NOTIFICATION_JIRA_SERVER = (
-            f"notification_{NotificationType.JiraServer}",
+            f"notification.{NotificationType.JiraServer}",
             "Jira Server Notification",
         )
         NOTIFICATION_AZURE_DEVOPS = (
-            f"notification_{NotificationType.AzureDevOps}",
+            f"notification.{NotificationType.AzureDevOps}",
             "Azure DevOps Notification",
         )
         NOTIFICATION_SENTRY_APP = (
-            f"notification_{NotificationType.SentryApp}",
+            f"notification.{NotificationType.SentryApp}",
             "Sentry App Notification",
         )
-        NOTIFICATION_EMAIL = f"notification_{NotificationType.Email}", "Email Notification"
+        NOTIFICATION_EMAIL = f"notification.{NotificationType.Email}", "Email Notification"
 
         TRIGGER_WORKFLOW = "trigger_workflow", "Trigger Workflow"
 
