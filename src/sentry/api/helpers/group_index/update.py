@@ -183,33 +183,7 @@ def update_groups(
     user = user or request.user
     data = data or request.data
 
-    if group_ids:
-        group_list = Group.objects.filter(
-            project__organization_id=organization_id, project__in=projects, id__in=group_ids
-        )
-        # filter down group ids to only valid matches
-        group_ids = [g.id for g in group_list]
-        if not group_ids:
-            return Response(status=204)
-    else:
-        group_list = None
-
-    serializer = None
-    # TODO(jess): We may want to look into refactoring GroupValidator
-    # to support multiple projects, but this is pretty complicated
-    # because of the assignee validation. Punting on this for now.
-    for project in projects:
-        serializer = GroupValidator(
-            data=data,
-            partial=True,
-            context={
-                "project": project,
-                "organization": project.organization,
-                "access": getattr(request, "access", None),
-            },
-        )
-        if not serializer.is_valid():
-            raise serializers.ValidationError(serializer.errors)
+    serializer = validate_request(request, projects, data)
 
     if serializer is None:
         # XXX: I do not know what the right code should be here.
@@ -222,22 +196,15 @@ def update_groups(
 
     acting_user = user if user.is_authenticated else None
 
-    if search_fn and not group_ids:
-        try:
-            cursor_result, _ = search_fn(
-                {
-                    "limit": BULK_MUTATION_LIMIT,
-                    "paginator_options": {"max_limit": BULK_MUTATION_LIMIT},
-                }
-            )
-        except ValidationError as exc:
-            return Response({"detail": str(exc)}, status=400)
+    try:
+        group_ids, group_list = get_group_ids_and_group_list(
+            organization_id, projects, group_ids, search_fn
+        )
+        if not group_ids or not group_list:
+            return Response({"detail": "No groups found"}, status=204)
 
-        group_list = list(cursor_result)
-        group_ids = [g.id for g in group_list]
-
-    if group_list is None:
-        return Response({"detail": "No groups found"}, status=404)
+    except ValidationError as exc:
+        return Response({"detail": str(exc)}, status=400)
 
     group_project_ids = {g.project_id for g in group_list}
     # filter projects down to only those that have groups in the search results
@@ -295,6 +262,62 @@ def update_groups(
         res_type,
         request.META.get("HTTP_REFERER", ""),
     )
+
+
+def validate_request(
+    request: Request,
+    projects: Sequence[Project],
+    data: Mapping[str, Any],
+) -> GroupValidator | None:
+    serializer = None
+    # TODO(jess): We may want to look into refactoring GroupValidator
+    # to support multiple projects, but this is pretty complicated
+    # because of the assignee validation. Punting on this for now.
+    for project in projects:
+        serializer = GroupValidator(
+            data=data,
+            partial=True,
+            context={
+                "project": project,
+                "organization": project.organization,
+                "access": getattr(request, "access", None),
+            },
+        )
+        if not serializer.is_valid():
+            raise serializers.ValidationError(serializer.errors)
+    return serializer
+
+
+def get_group_ids_and_group_list(
+    organization_id: int,
+    projects: Sequence[Project],
+    group_ids: Sequence[int | str] | None,
+    search_fn: SearchFunction | None,
+) -> tuple[list[int | str], list[Group]]:
+    _group_ids: list[int | str] = []
+    _group_list: list[Group] = []
+
+    if group_ids:
+        _group_list = list(
+            Group.objects.filter(
+                project__organization_id=organization_id, project__in=projects, id__in=group_ids
+            )
+        )
+        # filter down group ids to only valid matches
+        _group_ids = [g.id for g in _group_list]
+
+    if search_fn and not _group_ids:
+        cursor_result, _ = search_fn(
+            {
+                "limit": BULK_MUTATION_LIMIT,
+                "paginator_options": {"max_limit": BULK_MUTATION_LIMIT},
+            }
+        )
+
+        _group_list = list(cursor_result)
+        _group_ids = [g.id for g in _group_list]
+
+    return _group_ids, _group_list
 
 
 def handle_resolve_in_release(
@@ -475,7 +498,7 @@ def process_group_resolution(
     user: User | RpcUser,
     self_assign_issue: str,
     activity_type: ActivityType,
-    activity_data: Mapping[str, Any],
+    activity_data: MutableMapping[str, Any],
     result: MutableMapping[str, Any],
 ):
     now = django_timezone.now()
@@ -670,9 +693,9 @@ def handle_other_status_updates(
 ) -> dict[str, Any]:
     queryset = Group.objects.filter(id__in=group_ids)
     new_status = STATUS_UPDATE_CHOICES[result["status"]]
-    new_substatus = (
-        SUBSTATUS_UPDATE_CHOICES[result.get("substatus")] if result.get("substatus") else None
-    )
+    new_substatus = None
+    if result.get("substatus"):
+        new_substatus = SUBSTATUS_UPDATE_CHOICES[result.get("substatus")]
     new_substatus = infer_substatus(new_status, new_substatus, status_details, group_list)
 
     with transaction.atomic(router.db_for_write(Group)):
