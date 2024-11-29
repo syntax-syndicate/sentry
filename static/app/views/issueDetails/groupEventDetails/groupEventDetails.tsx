@@ -30,6 +30,7 @@ import GroupEventDetailsContent from 'sentry/views/issueDetails/groupEventDetail
 import {GroupEventDetailsLoading} from 'sentry/views/issueDetails/groupEventDetails/groupEventDetailsLoading';
 import GroupEventHeader from 'sentry/views/issueDetails/groupEventHeader';
 import GroupSidebar from 'sentry/views/issueDetails/groupSidebar';
+import {EventMissing} from 'sentry/views/issueDetails/streamline/eventMissing';
 import {useGroup} from 'sentry/views/issueDetails/useGroup';
 import {useGroupEvent} from 'sentry/views/issueDetails/useGroupEvent';
 
@@ -169,7 +170,9 @@ function GroupEventDetails() {
     }
 
     if (isEventError) {
-      return (
+      return hasStreamlinedUI ? (
+        <EventMissing />
+      ) : (
         <GroupEventDetailsLoadingError
           environments={environments}
           onRetry={() => {
